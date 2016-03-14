@@ -29,6 +29,32 @@
 /*===========================================================================*/
 /* Driver local definitions.                                                 */
 /*===========================================================================*/
+#define USART1_RX_DMA_CHANNEL                                               \
+  STM32_DMA_GETCHANNEL(STM32_UART_USART1_RX_DMA_STREAM,                     \
+                       STM32_USART1_RX_DMA_CHN)
+
+#define USART2_RX_DMA_CHANNEL                                               \
+  STM32_DMA_GETCHANNEL(STM32_UART_USART2_RX_DMA_STREAM,                     \
+                       STM32_USART2_RX_DMA_CHN)
+
+#define USART3_RX_DMA_CHANNEL                                               \
+  STM32_DMA_GETCHANNEL(STM32_UART_USART3_RX_DMA_STREAM,                     \
+                       STM32_USART3_RX_DMA_CHN)
+
+#define UART4_RX_DMA_CHANNEL                                                \
+  STM32_DMA_GETCHANNEL(STM32_UART_UART4_RX_DMA_STREAM,                      \
+                       STM32_UART4_RX_DMA_CHN)
+
+#define UART5_RX_DMA_CHANNEL                                                \
+  STM32_DMA_GETCHANNEL(STM32_UART_UART5_RX_DMA_STREAM,                      \
+                       STM32_UART5_RX_DMA_CHN)
+
+#define USART6_RX_DMA_CHANNEL                                               \
+  STM32_DMA_GETCHANNEL(STM32_UART_USART6_RX_DMA_STREAM,                     \
+                       STM32_USART6_RX_DMA_CHN)
+
+#define dmaBufTail(sdp)                                                     \
+  (STM32_SERIAL_DMA_BUFFER_SIZE - dmaStreamGetTransactionSize(sdp->dmarx))
 
 /*===========================================================================*/
 /* Driver exported variables.                                                */
@@ -111,9 +137,18 @@ static void usart_init(SerialDriver *sdp, const SerialConfig *config) {
   else
     u->BRR = STM32_PCLK1 / config->speed;
 
+  sdp->dmabufhead = 0;
+  sdp->dmamode |= STM32_DMA_CR_DIR_P2M | STM32_DMA_CR_CIRC | STM32_DMA_CR_MINC;
+  dmaStreamAllocate(sdp->dmarx, 0, NULL, NULL);
+  dmaStreamSetPeripheral(sdp->dmarx, &sdp->usart->DR);
+  dmaStreamSetMemory0(sdp->dmarx, &sdp->dmabuf);
+  dmaStreamSetTransactionSize(sdp->dmarx, STM32_SERIAL_DMA_BUFFER_SIZE);
+  dmaStreamSetMode(sdp->dmarx, sdp->dmamode);
+  dmaStreamEnable(sdp->dmarx);
+
   /* Note that some bits are enforced.*/
   u->CR2 = config->cr2 | USART_CR2_LBDIE;
-  u->CR3 = config->cr3 | USART_CR3_EIE;
+  u->CR3 = config->cr3 | USART_CR3_EIE | USART_CR3_DMAR;
   u->CR1 = config->cr1 | USART_CR1_UE | USART_CR1_PEIE |
                          USART_CR1_RXNEIE | USART_CR1_TE |
                          USART_CR1_RE;
@@ -175,16 +210,17 @@ static void serve_interrupt(SerialDriver *sdp) {
 
   /* Data available.*/
   osalSysLockFromISR();
-  while (sr & (USART_SR_RXNE | USART_SR_ORE | USART_SR_NE | USART_SR_FE |
-               USART_SR_PE)) {
-    uint8_t b;
-
+  while ((sr & (USART_SR_RXNE | USART_SR_ORE | USART_SR_NE | USART_SR_FE | USART_SR_PE)) ||
+         (sdp->dmabufhead != dmaBufTail(sdp))) {
     /* Error condition detection.*/
-    if (sr & (USART_SR_ORE | USART_SR_NE | USART_SR_FE  | USART_SR_PE))
+    if (sr & (USART_SR_ORE | USART_SR_NE | USART_SR_FE  | USART_SR_PE)) {
       set_error(sdp, sr);
-    b = u->DR;
-    if (sr & USART_SR_RXNE)
-      sdIncomingDataI(sdp, b);
+      (void)u->DR;
+    }
+    if (sdp->dmabufhead != dmaBufTail(sdp)) {
+      sdIncomingDataI(sdp, sdp->dmabuf[sdp->dmabufhead++]);
+      sdp->dmabufhead %= STM32_SERIAL_DMA_BUFFER_SIZE;
+    }
     sr = u->SR;
   }
   osalSysUnlockFromISR();
@@ -448,41 +484,49 @@ void sd_lld_init(void) {
 #if STM32_SERIAL_USE_USART1
   sdObjectInit(&SD1, NULL, notify1);
   SD1.usart = USART1;
+  SD1.dmarx = STM32_DMA_STREAM(STM32_SERIAL_USART1_RX_DMA_STREAM);
 #endif
 
 #if STM32_SERIAL_USE_USART2
   sdObjectInit(&SD2, NULL, notify2);
   SD2.usart = USART2;
+  SD2.dmarx = STM32_DMA_STREAM(STM32_SERIAL_USART2_RX_DMA_STREAM);
 #endif
 
 #if STM32_SERIAL_USE_USART3
   sdObjectInit(&SD3, NULL, notify3);
   SD3.usart = USART3;
+  SD3.dmarx = STM32_DMA_STREAM(STM32_SERIAL_USART3_RX_DMA_STREAM);
 #endif
 
 #if STM32_SERIAL_USE_UART4
   sdObjectInit(&SD4, NULL, notify4);
   SD4.usart = UART4;
+  SD4.dmarx = STM32_DMA_STREAM(STM32_SERIAL_UART4_RX_DMA_STREAM);
 #endif
 
 #if STM32_SERIAL_USE_UART5
   sdObjectInit(&SD5, NULL, notify5);
   SD5.usart = UART5;
+  SD5.dmarx = STM32_DMA_STREAM(STM32_SERIAL_UART5_RX_DMA_STREAM);
 #endif
 
 #if STM32_SERIAL_USE_USART6
   sdObjectInit(&SD6, NULL, notify6);
   SD6.usart = USART6;
+  SD6.dmarx = STM32_DMA_STREAM(STM32_SERIAL_USART6_RX_DMA_STREAM);
 #endif
 
 #if STM32_SERIAL_USE_UART7
   sdObjectInit(&SD7, NULL, notify7);
   SD7.usart = UART7;
+  SD7.dmarx = STM32_DMA_STREAM(STM32_SERIAL_UART7_RX_DMA_STREAM);
 #endif
 
 #if STM32_SERIAL_USE_UART8
   sdObjectInit(&SD8, NULL, notify8);
   SD8.usart = UART8;
+  SD8.dmarx = STM32_DMA_STREAM(STM32_SERIAL_UART8_RX_DMA_STREAM);
 #endif
 }
 
@@ -506,48 +550,64 @@ void sd_lld_start(SerialDriver *sdp, const SerialConfig *config) {
     if (&SD1 == sdp) {
       rccEnableUSART1(FALSE);
       nvicEnableVector(STM32_USART1_NUMBER, STM32_SERIAL_USART1_PRIORITY);
+      sdp->dmamode |= STM32_DMA_CR_CHSEL(USART1_RX_DMA_CHANNEL) |
+                      STM32_DMA_CR_PL(STM32_SERIAL_USART1_DMA_PRIORITY);
     }
 #endif
 #if STM32_SERIAL_USE_USART2
     if (&SD2 == sdp) {
       rccEnableUSART2(FALSE);
       nvicEnableVector(STM32_USART2_NUMBER, STM32_SERIAL_USART2_PRIORITY);
+      sdp->dmamode |= STM32_DMA_CR_CHSEL(USART2_RX_DMA_CHANNEL) |
+                      STM32_DMA_CR_PL(STM32_SERIAL_USART2_DMA_PRIORITY);
     }
 #endif
 #if STM32_SERIAL_USE_USART3
     if (&SD3 == sdp) {
       rccEnableUSART3(FALSE);
       nvicEnableVector(STM32_USART3_NUMBER, STM32_SERIAL_USART3_PRIORITY);
+      sdp->dmamode |= STM32_DMA_CR_CHSEL(USART3_RX_DMA_CHANNEL) |
+                      STM32_DMA_CR_PL(STM32_SERIAL_USART3_DMA_PRIORITY);
     }
 #endif
 #if STM32_SERIAL_USE_UART4
     if (&SD4 == sdp) {
       rccEnableUART4(FALSE);
       nvicEnableVector(STM32_UART4_NUMBER, STM32_SERIAL_UART4_PRIORITY);
+      sdp->dmamode |= STM32_DMA_CR_CHSEL(UART4_RX_DMA_CHANNEL) |
+                      STM32_DMA_CR_PL(STM32_SERIAL_UART4_DMA_PRIORITY);
     }
 #endif
 #if STM32_SERIAL_USE_UART5
     if (&SD5 == sdp) {
       rccEnableUART5(FALSE);
       nvicEnableVector(STM32_UART5_NUMBER, STM32_SERIAL_UART5_PRIORITY);
+      sdp->dmamode |= STM32_DMA_CR_CHSEL(UART5_RX_DMA_CHANNEL) |
+                      STM32_DMA_CR_PL(STM32_SERIAL_UART5_DMA_PRIORITY);
     }
 #endif
 #if STM32_SERIAL_USE_USART6
     if (&SD6 == sdp) {
       rccEnableUSART6(FALSE);
       nvicEnableVector(STM32_USART6_NUMBER, STM32_SERIAL_USART6_PRIORITY);
+      sdp->dmamode |= STM32_DMA_CR_CHSEL(USART6_RX_DMA_CHANNEL) |
+                      STM32_DMA_CR_PL(STM32_SERIAL_USART6_DMA_PRIORITY);
     }
 #endif
 #if STM32_SERIAL_USE_UART7
     if (&SD7 == sdp) {
       rccEnableUART7(FALSE);
       nvicEnableVector(STM32_UART7_NUMBER, STM32_SERIAL_UART7_PRIORITY);
+      sdp->dmamode |= STM32_DMA_CR_CHSEL(UART7_RX_DMA_CHANNEL) |
+                      STM32_DMA_CR_PL(STM32_SERIAL_UART7_DMA_PRIORITY);
     }
 #endif
 #if STM32_SERIAL_USE_UART8
     if (&SD8 == sdp) {
       rccEnableUART8(FALSE);
       nvicEnableVector(STM32_UART8_NUMBER, STM32_SERIAL_UART8_PRIORITY);
+      sdp->dmamode |= STM32_DMA_CR_CHSEL(UART8_RX_DMA_CHANNEL) |
+                      STM32_DMA_CR_PL(STM32_SERIAL_UART8_DMA_PRIORITY);
     }
 #endif
   }
@@ -566,6 +626,7 @@ void sd_lld_start(SerialDriver *sdp, const SerialConfig *config) {
 void sd_lld_stop(SerialDriver *sdp) {
 
   if (sdp->state == SD_READY) {
+    dmaStreamDisable(sdp->dmarx);
     usart_deinit(sdp->usart);
 #if STM32_SERIAL_USE_USART1
     if (&SD1 == sdp) {
