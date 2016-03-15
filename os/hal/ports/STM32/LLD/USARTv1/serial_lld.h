@@ -302,12 +302,18 @@ typedef struct {
   /* Pointer to the USART registers block.*/                                \
   USART_TypeDef             *usart;                                         \
   uint32_t                  dmamode;                                        \
-  /* Input DMA buffer.*/                                                    \
-  volatile uint8_t          dmabuf[STM32_SERIAL_DMA_BUFFER_SIZE];           \
-  /* Input DMA buffer tail.*/                                               \
-  uint8_t                   dmabufhead;                                     \
+  /* Receive DMA buffer.*/                                                  \
+  volatile uint8_t          rxbuf[STM32_SERIAL_DMA_BUFFER_SIZE];            \
+  /* Receive DMA buffer head.*/                                             \
+  uint8_t                   rxbufhead;                                      \
   /* Receive DMA channel. */                                                \
   const stm32_dma_stream_t  *dmarx;                                         \
+  /* Transmit DMA buffer.*/                                                 \
+  volatile uint8_t          txbuf[STM32_SERIAL_DMA_BUFFER_SIZE];            \
+  /* Transmit DMA channel. */                                               \
+  const stm32_dma_stream_t  *dmatx;                                         \
+  /* Transmit DMA state. */                                                 \
+  bool                      txbusy;                                         \
 
 /*===========================================================================*/
 /* Driver macros.                                                            */
