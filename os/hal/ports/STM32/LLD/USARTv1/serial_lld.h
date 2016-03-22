@@ -300,7 +300,20 @@ typedef struct {
   uint8_t                   ob[SERIAL_BUFFERS_SIZE];                        \
   /* End of the mandatory fields.*/                                         \
   /* Pointer to the USART registers block.*/                                \
-  USART_TypeDef             *usart;
+  USART_TypeDef             *usart;                                         \
+  uint32_t                  dmamode;                                        \
+  /* Receive DMA buffer.*/                                                  \
+  volatile uint8_t          rxbuf[STM32_SERIAL_DMA_BUFFER_SIZE];            \
+  /* Receive DMA buffer head.*/                                             \
+  uint8_t                   rxbufhead;                                      \
+  /* Receive DMA channel. */                                                \
+  const stm32_dma_stream_t  *dmarx;                                         \
+  /* Transmit DMA buffer.*/                                                 \
+  volatile uint8_t          txbuf[STM32_SERIAL_DMA_BUFFER_SIZE];            \
+  /* Transmit DMA channel. */                                               \
+  const stm32_dma_stream_t  *dmatx;                                         \
+  /* Transmit DMA state. */                                                 \
+  bool                      txbusy;                                         \
 
 /*===========================================================================*/
 /* Driver macros.                                                            */
