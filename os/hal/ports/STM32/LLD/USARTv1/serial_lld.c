@@ -177,8 +177,6 @@ static void usart_init(SerialDriver *sdp, const SerialConfig *config) {
                                STM32_DMA_CR_CIRC | STM32_DMA_CR_MINC);
   dmaStreamEnable(sdp->dmarx);
 
-  dmaStreamAllocate(sdp->dmatx, STM32_UART_USART1_IRQ_PRIORITY,
-                    (stm32_dmaisr_t)serve_dma_interrupt, (void *)sdp);
   dmaStreamSetPeripheral(sdp->dmatx, &sdp->usart->DR);
   dmaStreamSetMode(sdp->dmatx, sdp->dmamode | STM32_DMA_CR_DIR_M2P |
                                STM32_DMA_CR_MINC | STM32_DMA_CR_TCIE);
@@ -539,6 +537,8 @@ void sd_lld_init(void) {
   SD1.usart = USART1;
   SD1.dmarx = STM32_DMA_STREAM(STM32_SERIAL_USART1_RX_DMA_STREAM);
   SD1.dmatx = STM32_DMA_STREAM(STM32_SERIAL_USART1_TX_DMA_STREAM);
+  dmaStreamAllocate(SD1.dmatx, STM32_SERIAL_USART1_PRIORITY,
+                    (stm32_dmaisr_t)serve_dma_interrupt, &SD1);
 #endif
 
 #if STM32_SERIAL_USE_USART2
@@ -546,6 +546,8 @@ void sd_lld_init(void) {
   SD2.usart = USART2;
   SD2.dmarx = STM32_DMA_STREAM(STM32_SERIAL_USART2_RX_DMA_STREAM);
   SD2.dmatx = STM32_DMA_STREAM(STM32_SERIAL_USART2_TX_DMA_STREAM);
+  dmaStreamAllocate(SD2.dmatx, STM32_SERIAL_USART2_PRIORITY,
+                    (stm32_dmaisr_t)serve_dma_interrupt, &SD2);
 #endif
 
 #if STM32_SERIAL_USE_USART3
@@ -553,6 +555,8 @@ void sd_lld_init(void) {
   SD3.usart = USART3;
   SD3.dmarx = STM32_DMA_STREAM(STM32_SERIAL_USART3_RX_DMA_STREAM);
   SD3.dmatx = STM32_DMA_STREAM(STM32_SERIAL_USART3_TX_DMA_STREAM);
+  dmaStreamAllocate(SD3.dmatx, STM32_SERIAL_USART3_PRIORITY,
+                    (stm32_dmaisr_t)serve_dma_interrupt, &SD3);
 #endif
 
 #if STM32_SERIAL_USE_UART4
@@ -560,6 +564,8 @@ void sd_lld_init(void) {
   SD4.usart = UART4;
   SD4.dmarx = STM32_DMA_STREAM(STM32_SERIAL_UART4_RX_DMA_STREAM);
   SD4.dmatx = STM32_DMA_STREAM(STM32_SERIAL_UART4_TX_DMA_STREAM);
+  dmaStreamAllocate(SD4.dmatx, STM32_SERIAL_UART4_PRIORITY,
+                    (stm32_dmaisr_t)serve_dma_interrupt, &SD4);
 #endif
 
 #if STM32_SERIAL_USE_UART5
@@ -567,6 +573,8 @@ void sd_lld_init(void) {
   SD5.usart = UART5;
   SD5.dmarx = STM32_DMA_STREAM(STM32_SERIAL_UART5_RX_DMA_STREAM);
   SD5.dmatx = STM32_DMA_STREAM(STM32_SERIAL_UART5_TX_DMA_STREAM);
+  dmaStreamAllocate(SD5.dmatx, STM32_SERIAL_UART5_PRIORITY,
+                    (stm32_dmaisr_t)serve_dma_interrupt, &SD5);
 #endif
 
 #if STM32_SERIAL_USE_USART6
@@ -574,6 +582,8 @@ void sd_lld_init(void) {
   SD6.usart = USART6;
   SD6.dmarx = STM32_DMA_STREAM(STM32_SERIAL_USART6_RX_DMA_STREAM);
   SD6.dmatx = STM32_DMA_STREAM(STM32_SERIAL_USART6_TX_DMA_STREAM);
+  dmaStreamAllocate(SD6.dmatx, STM32_SERIAL_USART6_PRIORITY,
+                    (stm32_dmaisr_t)serve_dma_interrupt, &SD6);
 #endif
 
 #if STM32_SERIAL_USE_UART7
@@ -581,6 +591,8 @@ void sd_lld_init(void) {
   SD7.usart = UART7;
   SD7.dmarx = STM32_DMA_STREAM(STM32_SERIAL_UART7_RX_DMA_STREAM);
   SD7.dmatx = STM32_DMA_STREAM(STM32_SERIAL_UART7_TX_DMA_STREAM);
+  dmaStreamAllocate(SD7.dmatx, STM32_SERIAL_UART7_PRIORITY,
+                    (stm32_dmaisr_t)serve_dma_interrupt, &SD7);
 #endif
 
 #if STM32_SERIAL_USE_UART8
@@ -588,6 +600,8 @@ void sd_lld_init(void) {
   SD8.usart = UART8;
   SD8.dmarx = STM32_DMA_STREAM(STM32_SERIAL_UART8_RX_DMA_STREAM);
   SD8.dmatx = STM32_DMA_STREAM(STM32_SERIAL_UART8_TX_DMA_STREAM);
+  dmaStreamAllocate(SD8.dmatx, STM32_SERIAL_UART8_PRIORITY,
+                    (stm32_dmaisr_t)serve_dma_interrupt, &SD8);
 #endif
 }
 
