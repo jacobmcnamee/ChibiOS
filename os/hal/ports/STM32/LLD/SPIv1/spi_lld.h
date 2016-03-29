@@ -434,6 +434,10 @@ typedef struct {
    * @brief SPI initialization data.
    */
   uint16_t                  cr1;
+  /**
+   * @brief DMA not-supported on this channel.
+   */
+  bool                      no_dma;
 } SPIConfig;
 
 /**
